@@ -10,3 +10,4 @@ In the configuration panel there are two dropdown selectors :
 2. widgetSize
 
 Practice don't repeat yourself. Use Typescript. Comment your code.
+Create package json as required.
