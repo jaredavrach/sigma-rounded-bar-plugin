@@ -108,22 +108,33 @@ export default function RoundedBarChart({
       return `${fmt(row.values[0])} / ${fmt(row.total)}`;
     };
 
-    // markLine: full height uses the axis shorthand; partial heights use explicit
-    // start/end coords centered in the category axis.
+    // markLine: full height uses the axis shorthand; partial heights snap to the
+    // nearest valid INTEGER category indices so the category axis can resolve them.
+    // Fractional indices silently fail on a category axis — that was the invisible bug.
     const markLineConfig = (() => {
       if (!showTargetLine || isNaN(targetLineValue)) return undefined;
       let lineData: unknown[];
-      if (targetLineHeight >= 100) {
+      const nRows = data.length;
+      if (targetLineHeight >= 100 || nRows <= 1) {
         lineData = [{ xAxis: targetLineValue }];
       } else {
         const f = targetLineHeight / 100;
-        const nRows = data.length;
-        const center = (nRows - 1) / 2;
-        const halfSpan = ((nRows - 1) * f) / 2;
-        lineData = [[
-          { coord: [targetLineValue, center - halfSpan] },
-          { coord: [targetLineValue, center + halfSpan] },
-        ]];
+        // Number of category slots to span, centred in the axis
+        const catCount = Math.max(1, Math.round(nRows * f));
+        let startIdx = Math.max(0, Math.round((nRows - catCount) / 2));
+        let endIdx   = Math.min(nRows - 1, startIdx + catCount - 1);
+        // Guarantee at least a 1-slot span so the line is visible
+        if (endIdx <= startIdx) endIdx = Math.min(nRows - 1, startIdx + 1);
+        if (endIdx <= startIdx) {
+          // Still the same (e.g. only 1 row) — fall back to full-height shorthand
+          lineData = [{ xAxis: targetLineValue }];
+        } else {
+          // Use actual category name strings — always valid on a category axis
+          lineData = [[
+            { coord: [targetLineValue, categories[startIdx]] },
+            { coord: [targetLineValue, categories[endIdx]] },
+          ]];
+        }
       }
       return {
         symbol: ['none', 'none'] as ['none', 'none'],
