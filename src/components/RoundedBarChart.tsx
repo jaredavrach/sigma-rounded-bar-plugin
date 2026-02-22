@@ -23,6 +23,7 @@ interface RoundedBarChartProps {
   showTargetLine: boolean;
   targetLineValue: number;
   targetLineColor: string;
+  targetLineThickness: number;
   onBarClick: (category: string) => void;
 }
 
@@ -50,6 +51,7 @@ export default function RoundedBarChart({
   showTargetLine,
   targetLineValue,
   targetLineColor,
+  targetLineThickness,
   onBarClick,
 }: RoundedBarChartProps) {
   const chartRef = useRef<ReactECharts>(null);
@@ -97,14 +99,6 @@ export default function RoundedBarChart({
       return { fontFamily };
     })();
 
-    // ECharts horizontal bar radius order: [top-left, top-right, bottom-right, bottom-left]
-    function radiusFor(idx: number): number | number[] {
-      if (n === 1) return r;
-      if (idx === 0) return [r, 0, 0, r];
-      if (idx === n - 1) return [0, r, r, 0];
-      return 0;
-    }
-
     const labelFormatter = (params: unknown) => {
       const p = params as { dataIndex: number };
       const row = data[p.dataIndex];
@@ -119,7 +113,7 @@ export default function RoundedBarChart({
             silent: true,
             lineStyle: {
               color: targetLineColor || '#000000',
-              width: 2,
+              width: targetLineThickness,
               type: 'solid' as const,
             },
             label: { show: false },
@@ -127,37 +121,72 @@ export default function RoundedBarChart({
           }
         : undefined;
 
-    const series = seriesNames.map((name, idx) => {
-      const isLast = idx === n - 1;
-      const isFirst = idx === 0;
-      return {
-        name,
-        type: 'bar' as const,
-        stack: 'total',
-        barWidth: barHeight,
-        data: data.map((d) => d.values[idx] ?? 0),
+    // Build left→right linear gradient stops so segment colors meet at the exact
+    // boundary with zero gap — this is more reliable than rounding individual stacked
+    // bar segments, which always leave a hairline seam between adjacent fills.
+    function buildGradientStops(row: BarRow) {
+      if (row.total <= 0) return [{ offset: 0, color: colors[0] ?? '#ccc' }];
+      const stops: Array<{ offset: number; color: string }> = [];
+      let cum = 0;
+      row.values.forEach((v, i) => {
+        const c = colors[i] ?? colors[colors.length - 1];
+        stops.push({ offset: Math.max(0, Math.min(1, cum / row.total)), color: c });
+        cum += v;
+        stops.push({ offset: Math.max(0, Math.min(1, cum / row.total)), color: c });
+      });
+      return stops;
+    }
+
+    // Single bar series rendered as a gradient pill — seamless, no inter-segment seams.
+    const mainSeries = {
+      name: '__gradient__',
+      type: 'bar' as const,
+      barWidth: barHeight,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: data.map((row) => ({
+        value: row.total,
         itemStyle: {
-          color: colors[idx] ?? colors[colors.length - 1],
-          borderRadius: radiusFor(idx),
+          borderRadius: r,
+          color:
+            n > 1 && row.total > 0
+              ? ({
+                  type: 'linear',
+                  x: 0, y: 0, x2: 1, y2: 0,
+                  colorStops: buildGradientStops(row),
+                } as unknown as string)
+              : (colors[0] ?? '#ccc'),
         },
-        silent: !interactable,
-        emphasis: interactable ? { focus: 'series' as const } : { disabled: true },
-        label:
-          showLabel && isLast
-            ? {
-                show: true,
-                position: 'right' as const,
-                color: '#64748b',
-                fontSize,
-                ...fontStyle,
-                formatter: labelFormatter,
-              }
-            : { show: false },
-        // Attach markLine to the first series — it renders at the correct x position
-        // regardless of which series carries it, and the first series always exists.
-        ...(isFirst && markLineConfig ? { markLine: markLineConfig } : {}),
-      };
-    });
+      })),
+      silent: !interactable,
+      emphasis: interactable ? { focus: 'none' as const } : { disabled: true },
+      label: showLabel
+        ? {
+            show: true,
+            position: 'right' as const,
+            color: '#64748b',
+            fontSize,
+            ...fontStyle,
+            formatter: labelFormatter,
+          }
+        : { show: false },
+      ...(markLineConfig ? { markLine: markLineConfig } : {}),
+    };
+
+    // Zero-data stub series registered purely so ECharts legend can show
+    // per-series colour swatches. They render as zero-width bars (invisible).
+    const legendStubs = seriesNames.map((name, idx) => ({
+      name,
+      type: 'bar' as const,
+      stack: '__legendstub__',
+      barWidth: 0,
+      data: data.map(() => 0),
+      itemStyle: { color: colors[idx] ?? colors[colors.length - 1] },
+      silent: true,
+      emphasis: { disabled: true as const },
+      label: { show: false },
+    }));
+
+    const series = [mainSeries, ...legendStubs];
 
     // Legend placement based on legendPosition prop
     const isVerticalLegend =
@@ -181,6 +210,7 @@ export default function RoundedBarChart({
       ? {
           orient: isVerticalLegend ? ('vertical' as const) : ('horizontal' as const),
           ...legendPlacement,
+          // Explicitly list stub names only — keeps __gradient__ out of the legend
           data: seriesNames,
           itemStyle: { borderWidth: 0 },
           textStyle: { ...fontStyle, color: '#64748b', fontSize },
@@ -284,7 +314,7 @@ export default function RoundedBarChart({
       },
       series,
     };
-  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, showTargetLine, targetLineValue, targetLineColor]);
+  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, showTargetLine, targetLineValue, targetLineColor, targetLineThickness]);
 
   return (
     <ReactECharts

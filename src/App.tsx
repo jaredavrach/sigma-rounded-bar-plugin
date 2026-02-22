@@ -99,6 +99,13 @@ client.config.configureEditorPanel([
     label: 'Target Line Value (column or formula column)',
   },
   { name: 'targetLineColor', type: 'color', label: 'Target Line Color' },
+  {
+    name: 'targetLineThickness',
+    type: 'dropdown',
+    label: 'Target Line Thickness (px)',
+    values: ['1', '2', '3', '4', '5'],
+    defaultValue: '2',
+  },
 
   // ── Colors ────────────────────────────────────────────────────────────────
   { name: 'color1', type: 'color', label: 'Series 1 Color' },
@@ -154,6 +161,7 @@ function App() {
     return isNaN(v) ? NaN : v;
   })();
   const targetLineColor = (config.targetLineColor as string | undefined) ?? '#000000';
+  const targetLineThickness = parseInt((config.targetLineThickness as string | undefined) ?? '2', 10);
 
   const userColors = [
     (config.color1 as string | undefined) ?? DEFAULT_COLORS[0],
@@ -241,6 +249,7 @@ function App() {
       showTargetLine={showTargetLine}
       targetLineValue={targetLineValue}
       targetLineColor={targetLineColor}
+      targetLineThickness={targetLineThickness}
       onBarClick={onBarClick}
     />
   );
