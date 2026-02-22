@@ -49,6 +49,7 @@ client.config.configureEditorPanel([
   { name: 'behaviorSection', type: 'group', label: 'Behavior' },
   { name: 'interactable', type: 'toggle', label: 'Interactable (enable clicks)', defaultValue: true },
   { name: 'showHoverTooltip', type: 'toggle', label: 'Show Hover Tooltip', defaultValue: true },
+  { name: 'highlightBarOnHover', type: 'toggle', label: 'Highlight Bar on Hover', defaultValue: true },
 
   // ── Target Line ────────────────────────────────────────────────────────────
   { name: 'targetLineSection', type: 'group', label: 'Target Line' },
@@ -99,6 +100,7 @@ function App() {
   const fontSize = parseInt((config.fontSize as string | undefined) ?? '12', 10);
   const interactable = (config.interactable as boolean | undefined) ?? true;
   const showHoverTooltip = (config.showHoverTooltip as boolean | undefined) ?? true;
+  const highlightBarOnHover = (config.highlightBarOnHover as boolean | undefined) ?? true;
   const midBarCurves = (config.midBarCurves as boolean | undefined) ?? true;
   const showTargetLine = (config.showTargetLine as boolean | undefined) ?? false;
   const targetLineColId = config.targetLineColumn as string | undefined;
@@ -198,6 +200,7 @@ function App() {
       fontSize={fontSize}
       interactable={interactable}
       showHoverTooltip={showHoverTooltip}
+      highlightBarOnHover={highlightBarOnHover}
       midBarCurves={midBarCurves}
       showTargetLine={showTargetLine}
       targetLineValue={targetLineValue}

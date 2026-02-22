@@ -21,6 +21,7 @@ interface RoundedBarChartProps {
   fontSize: number;
   interactable: boolean;
   showHoverTooltip: boolean;
+  highlightBarOnHover: boolean;
   midBarCurves: boolean;
   showTargetLine: boolean;
   targetLineValue: number;
@@ -52,6 +53,7 @@ export default function RoundedBarChart({
   fontSize,
   interactable,
   showHoverTooltip,
+  highlightBarOnHover,
   midBarCurves,
   showTargetLine,
   targetLineValue,
@@ -155,7 +157,7 @@ export default function RoundedBarChart({
         data: cumData,
         itemStyle: { color: colors[originalIdx] ?? colors[colors.length - 1], borderRadius: r },
         silent: !interactable,
-        emphasis: (interactable && showHoverTooltip) ? {} : { disabled: true as const },
+        emphasis: (interactable && highlightBarOnHover) ? {} : { disabled: true as const },
         label: showLabel && originalIdx === n - 1
           ? { show: true, position: 'right' as const, color: '#64748b', fontSize, ...fontStyle, formatter: labelFormatter }
           : { show: false },
@@ -176,7 +178,7 @@ export default function RoundedBarChart({
         data: data.map((d) => d.values[idx] ?? 0),
         itemStyle: { color: colors[idx] ?? colors[colors.length - 1], borderRadius: radiusFor(idx) },
         silent: !interactable,
-        emphasis: (interactable && showHoverTooltip) ? {} : { disabled: true as const },
+        emphasis: (interactable && highlightBarOnHover) ? {} : { disabled: true as const },
         label: showLabel && idx === n - 1
           ? { show: true, position: 'right' as const, color: '#64748b', fontSize, ...fontStyle, formatter: labelFormatter }
           : { show: false },
@@ -332,7 +334,7 @@ export default function RoundedBarChart({
       ],
       series: [...series, ...targetLineSeries],
     };
-  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, showHoverTooltip, midBarCurves, showTargetLine, targetLineValue, targetLineColor, targetLineThickness, targetLineHeight]);
+  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, showHoverTooltip, highlightBarOnHover, midBarCurves, showTargetLine, targetLineValue, targetLineColor, targetLineThickness, targetLineHeight]);
 
   return (
     <ReactECharts
