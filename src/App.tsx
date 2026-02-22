@@ -67,7 +67,9 @@ client.config.configureEditorPanel([
 
   // ── Interactions ──────────────────────────────────────────────────────────
   { name: 'interactionsSection', type: 'group', label: 'Interactions' },
-  { name: 'clickVariable', type: 'variable', label: 'On Click: Set Variable (optional)' },
+  { name: 'clickVariable', type: 'variable', label: 'On Click: Set Variable 1 (optional)' },
+  { name: 'clickVariable2', type: 'variable', label: 'On Click: Set Variable 2 (optional)' },
+  { name: 'clickVariable3', type: 'variable', label: 'On Click: Set Variable 3 (optional)' },
   { name: 'onClickAction', type: 'action-trigger', label: 'On Bar Click' },
 ]);
 
@@ -128,11 +130,17 @@ function App() {
       if (config.clickVariable) {
         client.config.setVariable(config.clickVariable as string, category);
       }
+      if (config.clickVariable2) {
+        client.config.setVariable(config.clickVariable2 as string, category);
+      }
+      if (config.clickVariable3) {
+        client.config.setVariable(config.clickVariable3 as string, category);
+      }
       if (config.onClickAction) {
         setTimeout(() => triggerOnClick(), 100);
       }
     },
-    [config.clickVariable, config.onClickAction, triggerOnClick],
+    [config.clickVariable, config.clickVariable2, config.clickVariable3, config.onClickAction, triggerOnClick],
   );
 
   // ── Data transform ────────────────────────────────────────────────────────
