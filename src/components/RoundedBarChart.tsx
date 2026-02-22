@@ -129,6 +129,7 @@ export default function RoundedBarChart({
 
     const series = seriesNames.map((name, idx) => {
       const isLast = idx === n - 1;
+      const isFirst = idx === 0;
       return {
         name,
         type: 'bar' as const,
@@ -152,7 +153,9 @@ export default function RoundedBarChart({
                 formatter: labelFormatter,
               }
             : { show: false },
-        ...(isLast && markLineConfig ? { markLine: markLineConfig } : {}),
+        // Attach markLine to the first series — it renders at the correct x position
+        // regardless of which series carries it, and the first series always exists.
+        ...(isFirst && markLineConfig ? { markLine: markLineConfig } : {}),
       };
     });
 
@@ -288,7 +291,7 @@ export default function RoundedBarChart({
       ref={chartRef}
       option={option}
       style={{ width: '100%', height: '100%' }}
-      opts={{ renderer: 'svg' }}
+      opts={{ renderer: 'canvas' }}
       notMerge
     />
   );
