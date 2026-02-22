@@ -11,122 +11,62 @@ import './App.css';
 
 client.config.configureEditorPanel([
   // ── Data ──────────────────────────────────────────────────────────────────
+  { name: 'dataSection', type: 'group', label: 'Data' },
   { name: 'source', type: 'element', label: 'Data Source' },
-  {
-    name: 'categoryColumn',
-    type: 'column',
-    source: 'source',
-    allowMultiple: false,
-    label: 'Category (Y Axis)',
-  },
-  {
-    name: 'valueColumns',
-    type: 'column',
-    source: 'source',
-    allowMultiple: true,
-    label: 'Value Columns (stacked series)',
-  },
+  { name: 'categoryColumn', type: 'column', source: 'source', allowMultiple: false, label: 'Category (Y Axis)' },
+  { name: 'valueColumns', type: 'column', source: 'source', allowMultiple: true, label: 'Value Columns (stacked series)' },
 
-  // ── Appearance ────────────────────────────────────────────────────────────
+  // ── Chart Appearance ──────────────────────────────────────────────────────
+  { name: 'appearanceSection', type: 'group', label: 'Chart Appearance' },
   { name: 'title', type: 'text', label: 'Chart Title', defaultValue: '', placeholder: 'Enter chart title' },
-  {
-    name: 'cornerRadius',
-    type: 'dropdown',
-    label: 'Corner Radius (px)',
-    values: ['0', '4', '8', '12', '16', '20', '24'],
-    defaultValue: '8',
-  },
-  {
-    name: 'barHeight',
-    type: 'dropdown',
-    label: 'Bar Height (px)',
-    values: ['12', '16', '20', '24', '28', '32'],
-    defaultValue: '20',
-  },
-  {
-    name: 'chartPadding',
-    type: 'dropdown',
-    label: 'Chart Padding (px)',
-    values: ['0', '8', '16', '24'],
-    defaultValue: '16',
-  },
-  {
-    name: 'labelStyle',
-    type: 'dropdown',
-    label: 'Value Label Style',
-    values: ['None', 'First Value / Total', 'First Value Only'],
-    defaultValue: 'None',
-  },
   { name: 'showTitle', type: 'toggle', label: 'Show Title', defaultValue: true },
+  { name: 'cornerRadius', type: 'dropdown', label: 'Corner Radius (px)', values: ['0', '4', '8', '12', '16', '20', '24'], defaultValue: '8' },
+  { name: 'barHeight', type: 'dropdown', label: 'Bar Height (px)', values: ['12', '16', '20', '24', '28', '32'], defaultValue: '20' },
+  { name: 'chartPadding', type: 'dropdown', label: 'Chart Padding (px)', values: ['0', '8', '16', '24'], defaultValue: '16' },
+  { name: 'showPadding', type: 'toggle', label: 'Show Padding', defaultValue: true },
+  { name: 'labelStyle', type: 'dropdown', label: 'Value Label Style', values: ['None', 'First Value / Total', 'First Value Only'], defaultValue: 'None' },
+  { name: 'midBarCurves', type: 'toggle', label: 'Flowing Mid-Bar Curves', defaultValue: true },
+
+  // ── Legend & Axes ─────────────────────────────────────────────────────────
+  { name: 'legendSection', type: 'group', label: 'Legend & Axes' },
   { name: 'showLegend', type: 'toggle', label: 'Show Legend', defaultValue: true },
-  {
-    name: 'legendPosition',
-    type: 'dropdown',
-    label: 'Legend Position',
-    values: ['Bottom', 'Top', 'Left', 'Right', 'Top Right', 'Bottom Right'],
-    defaultValue: 'Bottom',
-  },
+  { name: 'legendPosition', type: 'dropdown', label: 'Legend Position', values: ['Bottom', 'Top', 'Left', 'Right', 'Top Right', 'Bottom Right'], defaultValue: 'Bottom' },
   { name: 'showXAxis', type: 'toggle', label: 'Show X Axis Label', defaultValue: true },
   { name: 'showYAxis', type: 'toggle', label: 'Show Y Axis Labels', defaultValue: true },
-  { name: 'showPadding', type: 'toggle', label: 'Show Padding', defaultValue: true },
+
+  // ── Font ──────────────────────────────────────────────────────────────────
+  { name: 'fontSection', type: 'group', label: 'Font' },
   {
     name: 'fontFamily',
     type: 'dropdown',
     label: 'Font Family',
-    values: [
-      'Default', 'Workbook Theme',
-      'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat',
-      'Poppins', 'DM Sans', 'Nunito', 'Source Serif Pro', 'Arial', 'Georgia',
-    ],
+    values: ['Default', 'Workbook Theme', 'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Poppins', 'DM Sans', 'Nunito', 'Source Serif Pro', 'Arial', 'Georgia'],
     defaultValue: 'Default',
   },
-  {
-    name: 'fontSize',
-    type: 'dropdown',
-    label: 'Font Size',
-    values: ['10', '11', '12', '13', '14', '16', '18', '20'],
-    defaultValue: '12',
-  },
-  { name: 'interactable', type: 'toggle', label: 'Interactable', defaultValue: true },
-  { name: 'midBarCurves', type: 'toggle', label: 'Flowing Mid-Bar Curves', defaultValue: true },
+  { name: 'fontSize', type: 'dropdown', label: 'Font Size', values: ['10', '11', '12', '13', '14', '16', '18', '20'], defaultValue: '12' },
+
+  // ── Behavior ──────────────────────────────────────────────────────────────
+  { name: 'behaviorSection', type: 'group', label: 'Behavior' },
+  { name: 'interactable', type: 'toggle', label: 'Interactable (enable clicks)', defaultValue: true },
+  { name: 'showHoverTooltip', type: 'toggle', label: 'Show Hover Tooltip', defaultValue: true },
 
   // ── Target Line ────────────────────────────────────────────────────────────
+  { name: 'targetLineSection', type: 'group', label: 'Target Line' },
   { name: 'showTargetLine', type: 'toggle', label: 'Show Target Line', defaultValue: false },
-  {
-    name: 'targetLineColumn',
-    type: 'column',
-    source: 'source',
-    allowMultiple: false,
-    label: 'Target Line Value (column or formula column)',
-  },
+  { name: 'targetLineColumn', type: 'column', source: 'source', allowMultiple: false, label: 'Target Line Value (column or formula)' },
   { name: 'targetLineColor', type: 'color', label: 'Target Line Color' },
-  {
-    name: 'targetLineThickness',
-    type: 'dropdown',
-    label: 'Target Line Thickness (px)',
-    values: ['1', '2', '3', '4', '5'],
-    defaultValue: '2',
-  },
-  {
-    name: 'targetLineHeight',
-    type: 'dropdown',
-    label: 'Target Line Height',
-    values: ['20%', '40%', '60%', '80%', '100%'],
-    defaultValue: '100%',
-  },
+  { name: 'targetLineThickness', type: 'dropdown', label: 'Target Line Thickness (px)', values: ['1', '2', '3', '4', '5'], defaultValue: '2' },
+  { name: 'targetLineHeight', type: 'dropdown', label: 'Target Line Height', values: ['20%', '40%', '60%', '80%', '100%'], defaultValue: '100%' },
 
   // ── Colors ────────────────────────────────────────────────────────────────
+  { name: 'colorsSection', type: 'group', label: 'Colors' },
   { name: 'color1', type: 'color', label: 'Series 1 Color' },
   { name: 'color2', type: 'color', label: 'Series 2 Color' },
   { name: 'color3', type: 'color', label: 'Series 3 Color' },
 
   // ── Interactions ──────────────────────────────────────────────────────────
-  {
-    name: 'clickVariable',
-    type: 'variable',
-    allowedTypes: ['text'],
-    label: 'On Click: Set Variable (optional)',
-  },
+  { name: 'interactionsSection', type: 'group', label: 'Interactions' },
+  { name: 'clickVariable', type: 'variable', allowedTypes: ['text'], label: 'On Click: Set Variable (optional)' },
   { name: 'onClickAction', type: 'action-trigger', label: 'On Bar Click' },
 ]);
 
@@ -158,6 +98,7 @@ function App() {
   const fontFamily = (config.fontFamily as string | undefined) ?? 'Default';
   const fontSize = parseInt((config.fontSize as string | undefined) ?? '12', 10);
   const interactable = (config.interactable as boolean | undefined) ?? true;
+  const showHoverTooltip = (config.showHoverTooltip as boolean | undefined) ?? true;
   const midBarCurves = (config.midBarCurves as boolean | undefined) ?? true;
   const showTargetLine = (config.showTargetLine as boolean | undefined) ?? false;
   const targetLineColId = config.targetLineColumn as string | undefined;
@@ -256,6 +197,7 @@ function App() {
       fontFamily={fontFamily}
       fontSize={fontSize}
       interactable={interactable}
+      showHoverTooltip={showHoverTooltip}
       midBarCurves={midBarCurves}
       showTargetLine={showTargetLine}
       targetLineValue={targetLineValue}

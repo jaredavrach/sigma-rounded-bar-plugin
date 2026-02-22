@@ -20,6 +20,7 @@ interface RoundedBarChartProps {
   fontFamily: string;
   fontSize: number;
   interactable: boolean;
+  showHoverTooltip: boolean;
   midBarCurves: boolean;
   showTargetLine: boolean;
   targetLineValue: number;
@@ -50,6 +51,7 @@ export default function RoundedBarChart({
   fontFamily,
   fontSize,
   interactable,
+  showHoverTooltip,
   midBarCurves,
   showTargetLine,
   targetLineValue,
@@ -153,7 +155,7 @@ export default function RoundedBarChart({
         data: cumData,
         itemStyle: { color: colors[originalIdx] ?? colors[colors.length - 1], borderRadius: r },
         silent: !interactable,
-        emphasis: interactable ? {} : { disabled: true as const },
+        emphasis: (interactable && showHoverTooltip) ? {} : { disabled: true as const },
         label: showLabel && originalIdx === n - 1
           ? { show: true, position: 'right' as const, color: '#64748b', fontSize, ...fontStyle, formatter: labelFormatter }
           : { show: false },
@@ -174,7 +176,7 @@ export default function RoundedBarChart({
         data: data.map((d) => d.values[idx] ?? 0),
         itemStyle: { color: colors[idx] ?? colors[colors.length - 1], borderRadius: radiusFor(idx) },
         silent: !interactable,
-        emphasis: interactable ? {} : { disabled: true as const },
+        emphasis: (interactable && showHoverTooltip) ? {} : { disabled: true as const },
         label: showLabel && idx === n - 1
           ? { show: true, position: 'right' as const, color: '#64748b', fontSize, ...fontStyle, formatter: labelFormatter }
           : { show: false },
@@ -273,7 +275,7 @@ export default function RoundedBarChart({
             textStyle: { ...fontStyle, fontSize: fontSize + 3, fontWeight: 600, color: '#1e293b' },
           }
         : undefined,
-      tooltip: interactable
+      tooltip: (interactable && showHoverTooltip)
         ? {
             trigger: 'axis',
             axisPointer: { type: 'shadow' },
@@ -330,7 +332,7 @@ export default function RoundedBarChart({
       ],
       series: [...series, ...targetLineSeries],
     };
-  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, midBarCurves, showTargetLine, targetLineValue, targetLineColor, targetLineThickness, targetLineHeight]);
+  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, showHoverTooltip, midBarCurves, showTargetLine, targetLineValue, targetLineColor, targetLineThickness, targetLineHeight]);
 
   return (
     <ReactECharts
