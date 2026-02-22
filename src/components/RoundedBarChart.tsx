@@ -20,6 +20,7 @@ interface RoundedBarChartProps {
   fontFamily: string;
   fontSize: number;
   interactable: boolean;
+  midBarCurves: boolean;
   showTargetLine: boolean;
   targetLineValue: number;
   targetLineColor: string;
@@ -49,6 +50,7 @@ export default function RoundedBarChart({
   fontFamily,
   fontSize,
   interactable,
+  midBarCurves,
   showTargetLine,
   targetLineValue,
   targetLineColor,
@@ -108,82 +110,92 @@ export default function RoundedBarChart({
       return `${fmt(row.values[0])} / ${fmt(row.total)}`;
     };
 
-    // markLine: full height uses the axis shorthand; partial heights snap to the
-    // nearest valid INTEGER category indices so the category axis can resolve them.
-    // Fractional indices silently fail on a category axis — that was the invisible bug.
-    const markLineConfig = (() => {
-      if (!showTargetLine || isNaN(targetLineValue)) return undefined;
-      let lineData: unknown[];
-      const nRows = data.length;
-      if (targetLineHeight >= 100 || nRows <= 1) {
-        lineData = [{ xAxis: targetLineValue }];
-      } else {
-        const f = targetLineHeight / 100;
-        // Number of category slots to span, centred in the axis
-        const catCount = Math.max(1, Math.round(nRows * f));
-        let startIdx = Math.max(0, Math.round((nRows - catCount) / 2));
-        let endIdx   = Math.min(nRows - 1, startIdx + catCount - 1);
-        // Guarantee at least a 1-slot span so the line is visible
-        if (endIdx <= startIdx) endIdx = Math.min(nRows - 1, startIdx + 1);
-        if (endIdx <= startIdx) {
-          // Still the same (e.g. only 1 row) — fall back to full-height shorthand
-          lineData = [{ xAxis: targetLineValue }];
-        } else {
-          // Use actual category name strings — always valid on a category axis
-          lineData = [[
-            { coord: [targetLineValue, categories[startIdx]] },
-            { coord: [targetLineValue, categories[endIdx]] },
-          ]];
+    // ── Target line ────────────────────────────────────────────────────────
+    // Uses a hidden secondary y-axis (value 0–1) so targetLineHeight% maps
+    // directly to a fraction of the grid height with no category-index rounding.
+    // yAxis: 0.5 is always the exact vertical center regardless of row count.
+    const hasTargetLine = showTargetLine && !isNaN(targetLineValue);
+    const markLineConfig: MarkLineComponentOption | undefined = hasTargetLine
+      ? {
+          symbol: ['none', 'none'] as ['none', 'none'],
+          silent: true,
+          lineStyle: { color: targetLineColor || '#000000', width: targetLineThickness, type: 'solid' as const },
+          label: { show: false },
+          data: (() => {
+            const f = Math.min(1, Math.max(0, targetLineHeight / 100));
+            const half = f / 2;
+            return [[
+              { xAxis: targetLineValue, yAxis: 0.5 - half },
+              { xAxis: targetLineValue, yAxis: 0.5 + half },
+            ]];
+          })(),
         }
-      }
-      return {
-        symbol: ['none', 'none'] as ['none', 'none'],
-        silent: true,
-        lineStyle: { color: targetLineColor || '#000000', width: targetLineThickness, type: 'solid' as const },
-        label: { show: false },
-        data: lineData,
-      } as MarkLineComponentOption;
-    })();
+      : undefined;
 
-    // Each series is given its CUMULATIVE value (sum of all series up to itself).
-    // Rendering from LARGEST → SMALLEST (reversed) with barGap: '-100%' places all
-    // bars at the same y-position so shorter bars sit on top of longer ones.
-    // Full borderRadius on every bar produces a rounded "cap" at each segment's right
-    // end — visible as a mid-bar curve at every color boundary.
-    const seriesData = seriesNames.map((name, idx) => ({
-      name,
-      originalIdx: idx,
-      cumData: data.map((row) =>
-        row.values.slice(0, idx + 1).reduce((s, v) => s + v, 0),
-      ),
-    }));
+    // ── Series ────────────────────────────────────────────────────────────
+    // midBarCurves = true  → cumulative overlapping bars (rounded cap on every segment)
+    // midBarCurves = false → standard stacked bars (outer corners only)
+    let series: object[];
 
-    const series = [...seriesData].reverse().map(({ name, originalIdx, cumData }) => ({
-      name,
-      type: 'bar' as const,
-      barWidth: barHeight,
-      barGap: '-100%',
-      data: cumData,
-      itemStyle: {
-        color: colors[originalIdx] ?? colors[colors.length - 1],
-        borderRadius: r,
-      },
-      silent: !interactable,
-      emphasis: interactable ? {} : { disabled: true as const },
-      label:
-        showLabel && originalIdx === n - 1
-          ? {
-              show: true,
-              position: 'right' as const,
-              color: '#64748b',
-              fontSize,
-              ...fontStyle,
-              formatter: labelFormatter,
-            }
+    if (midBarCurves) {
+      const seriesData = seriesNames.map((name, idx) => ({
+        name,
+        originalIdx: idx,
+        cumData: data.map((row) =>
+          row.values.slice(0, idx + 1).reduce((s, v) => s + v, 0),
+        ),
+      }));
+      series = [...seriesData].reverse().map(({ name, originalIdx, cumData }) => ({
+        name,
+        type: 'bar' as const,
+        barWidth: barHeight,
+        barGap: '-100%',
+        data: cumData,
+        itemStyle: { color: colors[originalIdx] ?? colors[colors.length - 1], borderRadius: r },
+        silent: !interactable,
+        emphasis: interactable ? {} : { disabled: true as const },
+        label: showLabel && originalIdx === n - 1
+          ? { show: true, position: 'right' as const, color: '#64748b', fontSize, ...fontStyle, formatter: labelFormatter }
           : { show: false },
-      // markLine on the background (largest) series so it spans the full chart height
-      ...(originalIdx === n - 1 && markLineConfig ? { markLine: markLineConfig } : {}),
-    }));
+      }));
+    } else {
+      // Outer-only rounding: left caps on first series, right caps on last, flat in between
+      function radiusFor(idx: number): number | number[] {
+        if (n === 1) return r;
+        if (idx === 0) return [r, 0, 0, r];
+        if (idx === n - 1) return [0, r, r, 0];
+        return 0;
+      }
+      series = seriesNames.map((name, idx) => ({
+        name,
+        type: 'bar' as const,
+        stack: 'total',
+        barWidth: barHeight,
+        data: data.map((d) => d.values[idx] ?? 0),
+        itemStyle: { color: colors[idx] ?? colors[colors.length - 1], borderRadius: radiusFor(idx) },
+        silent: !interactable,
+        emphasis: interactable ? {} : { disabled: true as const },
+        label: showLabel && idx === n - 1
+          ? { show: true, position: 'right' as const, color: '#64748b', fontSize, ...fontStyle, formatter: labelFormatter }
+          : { show: false },
+      }));
+    }
+
+    // Dummy series that carries the markLine, using the secondary y-axis (index 1).
+    // Attaching it here (not to a bar series) keeps bar rendering independent.
+    const targetLineSeries = markLineConfig
+      ? [{
+          name: '__targetline__',
+          type: 'bar' as const,
+          yAxisIndex: 1,
+          barWidth: 0,
+          data: [],
+          silent: true,
+          emphasis: { disabled: true as const },
+          label: { show: false },
+          markLine: markLineConfig,
+        }]
+      : [];
 
     // Legend placement based on legendPosition prop
     const isVerticalLegend =
@@ -295,22 +307,30 @@ export default function RoundedBarChart({
         axisTick: { show: false },
         axisLabel: { ...fontStyle, color: '#94a3b8', fontSize: fontSize - 1 },
       },
-      yAxis: {
-        type: 'category',
-        data: categories,
-        inverse: false,
-        axisLine: { show: false },
-        axisTick: { show: false },
-        axisLabel: {
-          ...fontStyle,
-          show: showYAxis,
-          color: '#475569',
-          fontSize,
+      yAxis: [
+        {
+          type: 'category' as const,
+          data: categories,
+          inverse: false,
+          axisLine: { show: false },
+          axisTick: { show: false },
+          axisLabel: { ...fontStyle, show: showYAxis, color: '#475569', fontSize },
         },
-      },
-      series,
+        // Hidden secondary axis (0–1) used solely for precise target line positioning
+        {
+          type: 'value' as const,
+          min: 0,
+          max: 1,
+          show: false,
+          splitLine: { show: false },
+          axisLine: { show: false },
+          axisTick: { show: false },
+          axisLabel: { show: false },
+        },
+      ],
+      series: [...series, ...targetLineSeries],
     };
-  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, showTargetLine, targetLineValue, targetLineColor, targetLineThickness, targetLineHeight]);
+  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, midBarCurves, showTargetLine, targetLineValue, targetLineColor, targetLineThickness, targetLineHeight]);
 
   return (
     <ReactECharts

@@ -88,6 +88,7 @@ client.config.configureEditorPanel([
     defaultValue: '12',
   },
   { name: 'interactable', type: 'toggle', label: 'Interactable', defaultValue: true },
+  { name: 'midBarCurves', type: 'toggle', label: 'Flowing Mid-Bar Curves', defaultValue: true },
 
   // ── Target Line ────────────────────────────────────────────────────────────
   { name: 'showTargetLine', type: 'toggle', label: 'Show Target Line', defaultValue: false },
@@ -157,6 +158,7 @@ function App() {
   const fontFamily = (config.fontFamily as string | undefined) ?? 'Default';
   const fontSize = parseInt((config.fontSize as string | undefined) ?? '12', 10);
   const interactable = (config.interactable as boolean | undefined) ?? true;
+  const midBarCurves = (config.midBarCurves as boolean | undefined) ?? true;
   const showTargetLine = (config.showTargetLine as boolean | undefined) ?? false;
   const targetLineColId = config.targetLineColumn as string | undefined;
   // Read the first numeric value from the selected column as the target position
@@ -254,6 +256,7 @@ function App() {
       fontFamily={fontFamily}
       fontSize={fontSize}
       interactable={interactable}
+      midBarCurves={midBarCurves}
       showTargetLine={showTargetLine}
       targetLineValue={targetLineValue}
       targetLineColor={targetLineColor}
