@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
+import type { EChartsOption, MarkLineComponentOption } from 'echarts';
 import type { BarRow } from '../App';
 
 interface RoundedBarChartProps {
@@ -24,6 +24,7 @@ interface RoundedBarChartProps {
   targetLineValue: number;
   targetLineColor: string;
   targetLineThickness: number;
+  targetLineHeight: number;
   onBarClick: (category: string) => void;
 }
 
@@ -52,6 +53,7 @@ export default function RoundedBarChart({
   targetLineValue,
   targetLineColor,
   targetLineThickness,
+  targetLineHeight,
   onBarClick,
 }: RoundedBarChartProps) {
   const chartRef = useRef<ReactECharts>(null);
@@ -106,87 +108,71 @@ export default function RoundedBarChart({
       return `${fmt(row.values[0])} / ${fmt(row.total)}`;
     };
 
-    const markLineConfig =
-      showTargetLine && !isNaN(targetLineValue)
-        ? {
-            symbol: ['none', 'none'] as ['none', 'none'],
-            silent: true,
-            lineStyle: {
-              color: targetLineColor || '#000000',
-              width: targetLineThickness,
-              type: 'solid' as const,
-            },
-            label: { show: false },
-            data: [{ xAxis: targetLineValue }],
-          }
-        : undefined;
+    // markLine: full height uses the axis shorthand; partial heights use explicit
+    // start/end coords centered in the category axis.
+    const markLineConfig = (() => {
+      if (!showTargetLine || isNaN(targetLineValue)) return undefined;
+      let lineData: unknown[];
+      if (targetLineHeight >= 100) {
+        lineData = [{ xAxis: targetLineValue }];
+      } else {
+        const f = targetLineHeight / 100;
+        const nRows = data.length;
+        const center = (nRows - 1) / 2;
+        const halfSpan = ((nRows - 1) * f) / 2;
+        lineData = [[
+          { coord: [targetLineValue, center - halfSpan] },
+          { coord: [targetLineValue, center + halfSpan] },
+        ]];
+      }
+      return {
+        symbol: ['none', 'none'] as ['none', 'none'],
+        silent: true,
+        lineStyle: { color: targetLineColor || '#000000', width: targetLineThickness, type: 'solid' as const },
+        label: { show: false },
+        data: lineData,
+      } as MarkLineComponentOption;
+    })();
 
-    // Build left→right linear gradient stops so segment colors meet at the exact
-    // boundary with zero gap — this is more reliable than rounding individual stacked
-    // bar segments, which always leave a hairline seam between adjacent fills.
-    function buildGradientStops(row: BarRow) {
-      if (row.total <= 0) return [{ offset: 0, color: colors[0] ?? '#ccc' }];
-      const stops: Array<{ offset: number; color: string }> = [];
-      let cum = 0;
-      row.values.forEach((v, i) => {
-        const c = colors[i] ?? colors[colors.length - 1];
-        stops.push({ offset: Math.max(0, Math.min(1, cum / row.total)), color: c });
-        cum += v;
-        stops.push({ offset: Math.max(0, Math.min(1, cum / row.total)), color: c });
-      });
-      return stops;
-    }
-
-    // Single bar series rendered as a gradient pill — seamless, no inter-segment seams.
-    const mainSeries = {
-      name: '__gradient__',
-      type: 'bar' as const,
-      barWidth: barHeight,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: data.map((row) => ({
-        value: row.total,
-        itemStyle: {
-          borderRadius: r,
-          color:
-            n > 1 && row.total > 0
-              ? ({
-                  type: 'linear',
-                  x: 0, y: 0, x2: 1, y2: 0,
-                  colorStops: buildGradientStops(row),
-                } as unknown as string)
-              : (colors[0] ?? '#ccc'),
-        },
-      })),
-      silent: !interactable,
-      emphasis: interactable ? { focus: 'none' as const } : { disabled: true },
-      label: showLabel
-        ? {
-            show: true,
-            position: 'right' as const,
-            color: '#64748b',
-            fontSize,
-            ...fontStyle,
-            formatter: labelFormatter,
-          }
-        : { show: false },
-      ...(markLineConfig ? { markLine: markLineConfig } : {}),
-    };
-
-    // Zero-data stub series registered purely so ECharts legend can show
-    // per-series colour swatches. They render as zero-width bars (invisible).
-    const legendStubs = seriesNames.map((name, idx) => ({
+    // Each series is given its CUMULATIVE value (sum of all series up to itself).
+    // Rendering from LARGEST → SMALLEST (reversed) with barGap: '-100%' places all
+    // bars at the same y-position so shorter bars sit on top of longer ones.
+    // Full borderRadius on every bar produces a rounded "cap" at each segment's right
+    // end — visible as a mid-bar curve at every color boundary.
+    const seriesData = seriesNames.map((name, idx) => ({
       name,
-      type: 'bar' as const,
-      stack: '__legendstub__',
-      barWidth: 0,
-      data: data.map(() => 0),
-      itemStyle: { color: colors[idx] ?? colors[colors.length - 1] },
-      silent: true,
-      emphasis: { disabled: true as const },
-      label: { show: false },
+      originalIdx: idx,
+      cumData: data.map((row) =>
+        row.values.slice(0, idx + 1).reduce((s, v) => s + v, 0),
+      ),
     }));
 
-    const series = [mainSeries, ...legendStubs];
+    const series = [...seriesData].reverse().map(({ name, originalIdx, cumData }) => ({
+      name,
+      type: 'bar' as const,
+      barWidth: barHeight,
+      barGap: '-100%',
+      data: cumData,
+      itemStyle: {
+        color: colors[originalIdx] ?? colors[colors.length - 1],
+        borderRadius: r,
+      },
+      silent: !interactable,
+      emphasis: interactable ? {} : { disabled: true as const },
+      label:
+        showLabel && originalIdx === n - 1
+          ? {
+              show: true,
+              position: 'right' as const,
+              color: '#64748b',
+              fontSize,
+              ...fontStyle,
+              formatter: labelFormatter,
+            }
+          : { show: false },
+      // markLine on the background (largest) series so it spans the full chart height
+      ...(originalIdx === n - 1 && markLineConfig ? { markLine: markLineConfig } : {}),
+    }));
 
     // Legend placement based on legendPosition prop
     const isVerticalLegend =
@@ -210,7 +196,6 @@ export default function RoundedBarChart({
       ? {
           orient: isVerticalLegend ? ('vertical' as const) : ('horizontal' as const),
           ...legendPlacement,
-          // Explicitly list stub names only — keeps __gradient__ out of the legend
           data: seriesNames,
           itemStyle: { borderWidth: 0 },
           textStyle: { ...fontStyle, color: '#64748b', fontSize },
@@ -314,7 +299,7 @@ export default function RoundedBarChart({
       },
       series,
     };
-  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, showTargetLine, targetLineValue, targetLineColor, targetLineThickness]);
+  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, showTargetLine, targetLineValue, targetLineColor, targetLineThickness, targetLineHeight]);
 
   return (
     <ReactECharts

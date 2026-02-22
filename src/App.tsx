@@ -106,6 +106,13 @@ client.config.configureEditorPanel([
     values: ['1', '2', '3', '4', '5'],
     defaultValue: '2',
   },
+  {
+    name: 'targetLineHeight',
+    type: 'dropdown',
+    label: 'Target Line Height',
+    values: ['20%', '40%', '60%', '80%', '100%'],
+    defaultValue: '100%',
+  },
 
   // ── Colors ────────────────────────────────────────────────────────────────
   { name: 'color1', type: 'color', label: 'Series 1 Color' },
@@ -162,6 +169,7 @@ function App() {
   })();
   const targetLineColor = (config.targetLineColor as string | undefined) ?? '#000000';
   const targetLineThickness = parseInt((config.targetLineThickness as string | undefined) ?? '2', 10);
+  const targetLineHeight = parseInt((config.targetLineHeight as string | undefined) ?? '100', 10);
 
   const userColors = [
     (config.color1 as string | undefined) ?? DEFAULT_COLORS[0],
@@ -250,6 +258,7 @@ function App() {
       targetLineValue={targetLineValue}
       targetLineColor={targetLineColor}
       targetLineThickness={targetLineThickness}
+      targetLineHeight={targetLineHeight}
       onBarClick={onBarClick}
     />
   );
