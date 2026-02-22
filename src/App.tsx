@@ -66,7 +66,7 @@ client.config.configureEditorPanel([
 
   // ── Interactions ──────────────────────────────────────────────────────────
   { name: 'interactionsSection', type: 'group', label: 'Interactions' },
-  { name: 'clickVariable', type: 'variable', allowedTypes: ['text'], label: 'On Click: Set Variable (optional)' },
+  { name: 'clickVariable', type: 'variable', label: 'On Click: Set Variable (optional)' },
   { name: 'onClickAction', type: 'action-trigger', label: 'On Bar Click' },
 ]);
 
