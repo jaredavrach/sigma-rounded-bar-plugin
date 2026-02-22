@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   client,
   useConfig,
@@ -86,6 +86,11 @@ function App() {
   const sigmaData = useElementData(config.source);
   const columnInfo = useElementColumns(config.source);
   const triggerOnClick = useActionTrigger(config.onClickAction);
+  // Keep a ref so onBarClick never needs triggerOnClick as a dependency.
+  // This prevents onBarClick from re-creating every render (which would
+  // cause the ZRender click handler to constantly deregister/reregister).
+  const triggerOnClickRef = useRef(triggerOnClick);
+  useEffect(() => { triggerOnClickRef.current = triggerOnClick; }, [triggerOnClick]);
 
   const title = (config.title as string | undefined) ?? '';
   const cornerRadius = parseInt((config.cornerRadius as string | undefined) ?? '8', 10);
@@ -127,20 +132,32 @@ function App() {
 
   const onBarClick = useCallback(
     (category: string) => {
-      if (config.clickVariable) {
-        client.config.setVariable(config.clickVariable as string, category);
-      }
-      if (config.clickVariable2) {
-        client.config.setVariable(config.clickVariable2 as string, category);
-      }
-      if (config.clickVariable3) {
-        client.config.setVariable(config.clickVariable3 as string, category);
+      try {
+        if (config.clickVariable) {
+          client.config.setVariable(config.clickVariable as string, category);
+        }
+        if (config.clickVariable2) {
+          client.config.setVariable(config.clickVariable2 as string, category);
+        }
+        if (config.clickVariable3) {
+          client.config.setVariable(config.clickVariable3 as string, category);
+        }
+      } catch (err) {
+        console.warn('[plugin] setVariable failed:', err);
       }
       if (config.onClickAction) {
-        setTimeout(() => triggerOnClick(), 100);
+        // Slightly longer delay so variable writes settle before the action fires.
+        // triggerOnClickRef always holds the latest function — no stale closure risk.
+        setTimeout(() => {
+          try { triggerOnClickRef.current(); }
+          catch (err) { console.warn('[plugin] action trigger failed:', err); }
+        }, 150);
       }
     },
-    [config.clickVariable, config.clickVariable2, config.clickVariable3, config.onClickAction, triggerOnClick],
+    // triggerOnClick intentionally excluded — we read it via ref to keep this
+    // callback stable and prevent unnecessary ZRender re-registrations.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config.clickVariable, config.clickVariable2, config.clickVariable3, config.onClickAction],
   );
 
   // ── Data transform ────────────────────────────────────────────────────────

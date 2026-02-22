@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption, MarkLineComponentOption } from 'echarts';
 import type { BarRow } from '../App';
@@ -64,26 +64,54 @@ export default function RoundedBarChart({
 }: RoundedBarChartProps) {
   const chartRef = useRef<ReactECharts>(null);
 
-  // ZRender raw click: fires for any click in the canvas (bar or empty row area).
-  // Skipped entirely when interactable is off.
-  useEffect(() => {
-    if (!interactable) return;
+  // ── Stable refs so the ZRender handler never holds stale closures ──────────
+  // The handler is registered ONCE (or when the chart re-initialises) and reads
+  // current values via refs, avoiding the deregister/reregister churn that can
+  // leave brief windows with no active click listener.
+  const dataRef = useRef(data);
+  const onBarClickRef = useRef(onBarClick);
+  const interactableRef = useRef(interactable);
+  useEffect(() => { dataRef.current = data; });
+  useEffect(() => { onBarClickRef.current = onBarClick; });
+  useEffect(() => { interactableRef.current = interactable; });
+
+  // Tracks the teardown function for the currently registered ZRender handler.
+  const zrCleanupRef = useRef<(() => void) | null>(null);
+
+  // Registers the ZRender click handler on the current ECharts instance.
+  // Safe to call multiple times — always cleans up the previous handler first.
+  const bindClickHandler = useCallback(() => {
+    zrCleanupRef.current?.();
+    zrCleanupRef.current = null;
+
     const instance = chartRef.current?.getEchartsInstance();
     if (!instance) return;
+
     const zr = instance.getZr();
     const handler = (e: { offsetX: number; offsetY: number }) => {
-      // Ignore clicks outside the actual plot area (legend, title, padding)
-      if (!instance.containPixel('grid', [e.offsetX, e.offsetY])) return;
-      const pt = instance.convertFromPixel('grid', [e.offsetX, e.offsetY]);
+      if (!interactableRef.current) return;
+      // Re-fetch instance inside handler — guards against stale reference
+      const inst = chartRef.current?.getEchartsInstance();
+      if (!inst) return;
+      if (!inst.containPixel('grid', [e.offsetX, e.offsetY])) return;
+      const pt = inst.convertFromPixel('grid', [e.offsetX, e.offsetY]);
       if (!pt) return;
       const yIdx = Math.round(pt[1]);
-      if (yIdx >= 0 && yIdx < data.length) {
-        onBarClick(data[yIdx].category);
+      const d = dataRef.current;
+      if (yIdx >= 0 && yIdx < d.length) {
+        onBarClickRef.current(d[yIdx].category);
       }
     };
+
     zr.on('click', handler);
-    return () => zr.off('click', handler);
-  }, [data, onBarClick, interactable]);
+    zrCleanupRef.current = () => zr.off('click', handler);
+  }, []); // No deps — reads everything through refs
+
+  // Bind on mount; onChartReady re-binds if ECharts ever re-initialises.
+  useEffect(() => {
+    bindClickHandler();
+    return () => { zrCleanupRef.current?.(); };
+  }, [bindClickHandler]);
 
   const option = useMemo<EChartsOption>(() => {
     const effectivePadding = showPadding ? chartPadding : 0;
@@ -343,6 +371,7 @@ export default function RoundedBarChart({
       style={{ width: '100%', height: '100%' }}
       opts={{ renderer: 'canvas' }}
       notMerge
+      onChartReady={bindClickHandler}
     />
   );
 }
