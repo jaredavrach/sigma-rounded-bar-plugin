@@ -92,11 +92,11 @@ client.config.configureEditorPanel([
   // ── Target Line ────────────────────────────────────────────────────────────
   { name: 'showTargetLine', type: 'toggle', label: 'Show Target Line', defaultValue: false },
   {
-    name: 'targetLineValue',
-    type: 'text',
-    label: 'Target Line Value',
-    defaultValue: '',
-    placeholder: 'e.g. 100',
+    name: 'targetLineColumn',
+    type: 'column',
+    source: 'source',
+    allowMultiple: false,
+    label: 'Target Line Value (column or formula column)',
   },
   { name: 'targetLineColor', type: 'color', label: 'Target Line Color' },
 
@@ -144,7 +144,15 @@ function App() {
   const fontSize = parseInt((config.fontSize as string | undefined) ?? '12', 10);
   const interactable = (config.interactable as boolean | undefined) ?? true;
   const showTargetLine = (config.showTargetLine as boolean | undefined) ?? false;
-  const targetLineValue = parseFloat((config.targetLineValue as string | undefined) ?? '');
+  const targetLineColId = config.targetLineColumn as string | undefined;
+  // Read the first numeric value from the selected column as the target position
+  const targetLineValue = (() => {
+    if (!targetLineColId || !sigmaData) return NaN;
+    const col = sigmaData[targetLineColId];
+    if (!Array.isArray(col) || col.length === 0) return NaN;
+    const v = Number(col[0]);
+    return isNaN(v) ? NaN : v;
+  })();
   const targetLineColor = (config.targetLineColor as string | undefined) ?? '#000000';
 
   const userColors = [
