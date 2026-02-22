@@ -66,7 +66,7 @@ client.config.configureEditorPanel([
     values: ['Bottom', 'Top', 'Left', 'Right', 'Top Right', 'Bottom Right'],
     defaultValue: 'Bottom',
   },
-  { name: 'showXAxis', type: 'toggle', label: 'Show X Axis', defaultValue: true },
+  { name: 'showXAxis', type: 'toggle', label: 'Show X Axis Label', defaultValue: true },
   { name: 'showYAxis', type: 'toggle', label: 'Show Y Axis Labels', defaultValue: true },
   { name: 'showPadding', type: 'toggle', label: 'Show Padding', defaultValue: true },
   {
