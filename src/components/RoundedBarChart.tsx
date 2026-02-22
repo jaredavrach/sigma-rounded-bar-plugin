@@ -20,6 +20,9 @@ interface RoundedBarChartProps {
   fontFamily: string;
   fontSize: number;
   interactable: boolean;
+  showTargetLine: boolean;
+  targetLineValue: number;
+  targetLineColor: string;
   onBarClick: (category: string) => void;
 }
 
@@ -44,6 +47,9 @@ export default function RoundedBarChart({
   fontFamily,
   fontSize,
   interactable,
+  showTargetLine,
+  targetLineValue,
+  targetLineColor,
   onBarClick,
 }: RoundedBarChartProps) {
   const chartRef = useRef<ReactECharts>(null);
@@ -106,30 +112,49 @@ export default function RoundedBarChart({
       return `${fmt(row.values[0])} / ${fmt(row.total)}`;
     };
 
-    const series = seriesNames.map((name, idx) => ({
-      name,
-      type: 'bar' as const,
-      stack: 'total',
-      barWidth: barHeight,
-      data: data.map((d) => d.values[idx] ?? 0),
-      itemStyle: {
-        color: colors[idx] ?? colors[colors.length - 1],
-        borderRadius: radiusFor(idx),
-      },
-      silent: !interactable,
-      emphasis: interactable ? { focus: 'series' as const } : { disabled: true },
-      label:
-        showLabel && idx === n - 1
-          ? {
-              show: true,
-              position: 'right' as const,
-              color: '#64748b',
-              fontSize,
-              ...fontStyle,
-              formatter: labelFormatter,
-            }
-          : { show: false },
-    }));
+    const markLineConfig =
+      showTargetLine && !isNaN(targetLineValue)
+        ? {
+            symbol: ['none', 'none'] as ['none', 'none'],
+            silent: true,
+            lineStyle: {
+              color: targetLineColor || '#000000',
+              width: 2,
+              type: 'solid' as const,
+            },
+            label: { show: false },
+            data: [{ xAxis: targetLineValue }],
+          }
+        : undefined;
+
+    const series = seriesNames.map((name, idx) => {
+      const isLast = idx === n - 1;
+      return {
+        name,
+        type: 'bar' as const,
+        stack: 'total',
+        barWidth: barHeight,
+        data: data.map((d) => d.values[idx] ?? 0),
+        itemStyle: {
+          color: colors[idx] ?? colors[colors.length - 1],
+          borderRadius: radiusFor(idx),
+        },
+        silent: !interactable,
+        emphasis: interactable ? { focus: 'series' as const } : { disabled: true },
+        label:
+          showLabel && isLast
+            ? {
+                show: true,
+                position: 'right' as const,
+                color: '#64748b',
+                fontSize,
+                ...fontStyle,
+                formatter: labelFormatter,
+              }
+            : { show: false },
+        ...(isLast && markLineConfig ? { markLine: markLineConfig } : {}),
+      };
+    });
 
     // Legend placement based on legendPosition prop
     const isVerticalLegend =
@@ -256,7 +281,7 @@ export default function RoundedBarChart({
       },
       series,
     };
-  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable]);
+  }, [data, seriesNames, colors, title, cornerRadius, barHeight, chartPadding, showPadding, labelStyle, showLegend, legendPosition, showXAxis, showYAxis, fontFamily, fontSize, interactable, showTargetLine, targetLineValue, targetLineColor]);
 
   return (
     <ReactECharts

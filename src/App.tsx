@@ -89,6 +89,17 @@ client.config.configureEditorPanel([
   },
   { name: 'interactable', type: 'toggle', label: 'Interactable', defaultValue: true },
 
+  // ── Target Line ────────────────────────────────────────────────────────────
+  { name: 'showTargetLine', type: 'toggle', label: 'Show Target Line', defaultValue: false },
+  {
+    name: 'targetLineValue',
+    type: 'text',
+    label: 'Target Line Value',
+    defaultValue: '',
+    placeholder: 'e.g. 100',
+  },
+  { name: 'targetLineColor', type: 'color', label: 'Target Line Color' },
+
   // ── Colors ────────────────────────────────────────────────────────────────
   { name: 'color1', type: 'color', label: 'Series 1 Color' },
   { name: 'color2', type: 'color', label: 'Series 2 Color' },
@@ -132,6 +143,9 @@ function App() {
   const fontFamily = (config.fontFamily as string | undefined) ?? 'Default';
   const fontSize = parseInt((config.fontSize as string | undefined) ?? '12', 10);
   const interactable = (config.interactable as boolean | undefined) ?? true;
+  const showTargetLine = (config.showTargetLine as boolean | undefined) ?? false;
+  const targetLineValue = parseFloat((config.targetLineValue as string | undefined) ?? '');
+  const targetLineColor = (config.targetLineColor as string | undefined) ?? '#000000';
 
   const userColors = [
     (config.color1 as string | undefined) ?? DEFAULT_COLORS[0],
@@ -216,6 +230,9 @@ function App() {
       fontFamily={fontFamily}
       fontSize={fontSize}
       interactable={interactable}
+      showTargetLine={showTargetLine}
+      targetLineValue={targetLineValue}
+      targetLineColor={targetLineColor}
       onBarClick={onBarClick}
     />
   );
